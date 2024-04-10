@@ -1,0 +1,6 @@
+MDK-ARM/DebugConfig/
+MDK-ARM/stm32f407vet6_recup_ledtest/
+MDK-ARM/*.scvd
+MDK-ARM/*.uvguix*
+MDK-ARM/*.uvoptx
+.mxproject
