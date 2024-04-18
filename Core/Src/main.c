@@ -97,6 +97,7 @@ uint8_t g_bNeedToRespond;
 
 float g_fValveCommand[2];
 float g_fEngineCommand[2];
+float g_fEngineState[2];
 int g_bRelayCommand;
 
 uint32_t g_iServoCycleCount = 0;
@@ -141,30 +142,30 @@ static void MX_TIM6_Init(void);
 #define MOTOR2_GP_TIM_INSTANCE MOTOR2_GP_TIM.Instance
 
 #define PWM_TIM_PRESCALER 1
-#define PWM_PERIOD 875 // 3500 === 24 kHz
-#define PWM_START_PULSE 190 // 1 microsecond = pulse 120, 900 <=> 8000 mA
-#define PWM_START_CYCLE_COUNT 500 // 1 cycle = 0.000025 second, 40 kHz, commutation-related
-#define PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT 150
-#define PWM_START_DEADTIME 0.05f // 0 ... 1, commutation-related
+#define PWM_PERIOD 4000 // 3500 === 24 kHz, 4200 === 20 kHz, 5250 === 16 kHz if HCLK === 168MHz, but 4000 === 20 kHz if HCLK === 160 MHz
+#define PWM_START_PULSE 200 // 1 microsecond = pulse 120, 900 <=> 8000 mA
+#define PWM_START_CYCLE_COUNT 700 // 1 cycle = 0.000025 second, 40 kHz, commutation-related
+#define PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT 350
+#define PWM_START_DEADTIME 0.00f // 0 ... 1, commutation-related
 #define PWM_START_COMPLEMENTARY_DEADTIME 50 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
-#define ENGINE_MAX_CYCLE_COUNT 18
+#define ENGINE_MAX_CYCLE_COUNT 76
 
 // Motor 1 commutation defines
 
 #define M1_U_CH TIM_CHANNEL_3
 #define M1_U_H &MOTOR1_PWM_TIM, M1_U_CH
-#define M1_U_PLUS_ON PinToAF(M1_U_L, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_U_H); HAL_TIM_PWM_Start(M1_U_H)
-#define M1_U_PLUS_OFF HAL_TIM_PWM_Stop(M1_U_H); HAL_TIMEx_PWMN_Stop(M1_U_H); PinToPP(M1_U_L)
+#define M1_U_PLUS_ON PinToAF(M1_U_L, &MOTOR1_PWM_TIM); PinToAF(M1_U_H_GPIO_Port, M1_U_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_U_H); HAL_TIM_PWM_Start(M1_U_H)
+#define M1_U_PLUS_OFF HAL_TIM_PWM_Stop(M1_U_H); HAL_TIMEx_PWMN_Stop(M1_U_H); PinToPP(M1_U_L); PinToPP(M1_U_H_GPIO_Port, M1_U_H_Pin); HAL_GPIO_WritePin(M1_U_H_GPIO_Port, M1_U_H_Pin, GPIO_PIN_RESET)
 
 #define M1_V_CH TIM_CHANNEL_2
 #define M1_V_H &MOTOR1_PWM_TIM, M1_V_CH
-#define M1_V_PLUS_ON PinToAF(M1_V_L, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_V_H); HAL_TIM_PWM_Start(M1_V_H)
-#define M1_V_PLUS_OFF HAL_TIM_PWM_Stop(M1_V_H); HAL_TIMEx_PWMN_Stop(M1_V_H); PinToPP(M1_V_L)
+#define M1_V_PLUS_ON PinToAF(M1_V_L, &MOTOR1_PWM_TIM); PinToAF(M1_V_H_GPIO_Port, M1_V_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_V_H); HAL_TIM_PWM_Start(M1_V_H)
+#define M1_V_PLUS_OFF HAL_TIM_PWM_Stop(M1_V_H); HAL_TIMEx_PWMN_Stop(M1_V_H); PinToPP(M1_V_L); PinToPP(M1_V_H_GPIO_Port, M1_V_H_Pin); HAL_GPIO_WritePin(M1_V_H_GPIO_Port, M1_V_H_Pin, GPIO_PIN_RESET)
 
 #define M1_W_CH TIM_CHANNEL_1
 #define M1_W_H &MOTOR1_PWM_TIM, M1_W_CH
-#define M1_W_PLUS_ON PinToAF(M1_W_L, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_W_H); HAL_TIM_PWM_Start(M1_W_H)
-#define M1_W_PLUS_OFF HAL_TIM_PWM_Stop(M1_W_H); HAL_TIMEx_PWMN_Stop(M1_W_H); PinToPP(M1_W_L)
+#define M1_W_PLUS_ON PinToAF(M1_W_L, &MOTOR1_PWM_TIM); PinToAF(M1_W_H_GPIO_Port, M1_W_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_W_H); HAL_TIM_PWM_Start(M1_W_H)
+#define M1_W_PLUS_OFF HAL_TIM_PWM_Stop(M1_W_H); HAL_TIMEx_PWMN_Stop(M1_W_H); PinToPP(M1_W_L); PinToPP(M1_W_H_GPIO_Port, M1_W_H_Pin); HAL_GPIO_WritePin(M1_W_H_GPIO_Port, M1_W_H_Pin, GPIO_PIN_RESET)
 
 #define M1_U_L M1_U_L_GPIO_Port, M1_U_L_Pin
 #define M1_U_MINUS_ON HAL_GPIO_WritePin(M1_U_L, GPIO_PIN_SET)
@@ -182,18 +183,18 @@ static void MX_TIM6_Init(void);
 
 #define M2_U_CH TIM_CHANNEL_3
 #define M2_U_H &MOTOR2_PWM_TIM, M2_U_CH
-#define M2_U_PLUS_ON PinToAF(M2_U_L, &MOTOR2_PWM_TIM);HAL_TIMEx_PWMN_Start(M2_U_H);HAL_TIM_PWM_Start(M2_U_H)
-#define M2_U_PLUS_OFF HAL_TIM_PWM_Stop(M2_U_H);HAL_TIMEx_PWMN_Stop(M2_U_H);PinToPP(M2_U_L)
+#define M2_U_PLUS_ON PinToAF(M2_U_L, &MOTOR2_PWM_TIM); PinToAF(M2_U_H_GPIO_Port, M2_U_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_U_H); HAL_TIM_PWM_Start(M2_U_H)
+#define M2_U_PLUS_OFF HAL_TIM_PWM_Stop(M2_U_H); HAL_TIMEx_PWMN_Stop(M2_U_H); PinToPP(M2_U_L); PinToPP(M2_U_H_GPIO_Port, M2_U_H_Pin); HAL_GPIO_WritePin(M2_U_H_GPIO_Port, M2_U_H_Pin, GPIO_PIN_RESET)
 
 #define M2_V_CH TIM_CHANNEL_2
 #define M2_V_H &MOTOR2_PWM_TIM, M2_V_CH
-#define M2_V_PLUS_ON PinToAF(M2_V_L, &MOTOR2_PWM_TIM);HAL_TIMEx_PWMN_Start(M2_V_H);HAL_TIM_PWM_Start(M2_V_H)
-#define M2_V_PLUS_OFF HAL_TIM_PWM_Stop(M2_V_H);HAL_TIMEx_PWMN_Stop(M2_V_H);PinToPP(M2_V_L)
+#define M2_V_PLUS_ON PinToAF(M2_V_L, &MOTOR2_PWM_TIM); PinToAF(M2_V_H_GPIO_Port, M2_V_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_V_H); HAL_TIM_PWM_Start(M2_V_H)
+#define M2_V_PLUS_OFF HAL_TIM_PWM_Stop(M2_V_H); HAL_TIMEx_PWMN_Stop(M2_V_H); PinToPP(M2_V_L); PinToPP(M2_V_H_GPIO_Port, M2_V_H_Pin); HAL_GPIO_WritePin(M2_V_H_GPIO_Port, M2_V_H_Pin, GPIO_PIN_RESET)
 
 #define M2_W_CH TIM_CHANNEL_1
 #define M2_W_H &MOTOR2_PWM_TIM, M2_W_CH
-#define M2_W_PLUS_ON PinToAF(M2_W_L, &MOTOR2_PWM_TIM);HAL_TIMEx_PWMN_Start(M2_W_H);HAL_TIM_PWM_Start(M2_W_H)
-#define M2_W_PLUS_OFF HAL_TIM_PWM_Stop(M2_W_H);HAL_TIMEx_PWMN_Stop(M2_W_H);PinToPP(M2_W_L)
+#define M2_W_PLUS_ON PinToAF(M2_W_L, &MOTOR2_PWM_TIM); PinToAF(M2_W_H_GPIO_Port, M2_W_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_W_H); HAL_TIM_PWM_Start(M2_W_H)
+#define M2_W_PLUS_OFF HAL_TIM_PWM_Stop(M2_W_H); HAL_TIMEx_PWMN_Stop(M2_W_H); PinToPP(M2_W_L); PinToPP(M2_W_H_GPIO_Port, M2_W_H_Pin); HAL_GPIO_WritePin(M2_W_H_GPIO_Port, M2_W_H_Pin, GPIO_PIN_RESET)
 
 #define M2_U_L M2_U_L_GPIO_Port, M2_U_L_Pin
 #define M2_U_MINUS_ON HAL_GPIO_WritePin(M2_U_L, GPIO_PIN_SET)
@@ -209,7 +210,7 @@ static void MX_TIM6_Init(void);
 
 // ADC-BEMF
 
-#define MOTOR1_ADC_SAMPLE_TIME ADC_SAMPLETIME_3CYCLES
+#define MOTOR1_ADC_SAMPLE_TIME ADC_SAMPLETIME_28CYCLES
 #define MOTOR1_ADC hadc1
 #define MOTOR1_ADC_INSTANCE MOTOR1_ADC.Instance
 #define MOTOR1_ADC_DELAY_CHANNEL TIM_CHANNEL_4
@@ -217,7 +218,7 @@ static void MX_TIM6_Init(void);
 #define M1_V_BEMF_CHANNEL ADC_CHANNEL_11
 #define M1_W_BEMF_CHANNEL ADC_CHANNEL_10
 
-#define MOTOR2_ADC_SAMPLE_TIME ADC_SAMPLETIME_3CYCLES
+#define MOTOR2_ADC_SAMPLE_TIME ADC_SAMPLETIME_28CYCLES
 #define MOTOR2_ADC hadc2
 #define MOTOR2_ADC_INSTANCE MOTOR1_ADC.Instance
 #define MOTOR2_ADC_DELAY_CHANNEL TIM_CHANNEL_4
@@ -225,7 +226,7 @@ static void MX_TIM6_Init(void);
 #define M2_V_BEMF_CHANNEL ADC_CHANNEL_14
 #define M2_W_BEMF_CHANNEL ADC_CHANNEL_13
 
-#define ADC_BEMF_DELAY_CYCLES_COUNT 85
+#define ADC_BEMF_DELAY_CYCLES_COUNT 30
 
 // Modes
 
@@ -241,6 +242,10 @@ uint32_t g_iCurrentCycleNum[2];
 uint32_t g_iTotalCycleCount[2]; // 1 cycle = 0.00005 second, 20 kHz
 float g_fCommutationDeadtime[2];
 uint8_t g_bNeedNewCommutation[2];
+uint8_t g_bADCReliable[2];
+uint32_t g_iEnginePWMPulsesCount[2]; // number of pwm pulses since last commutation
+uint32_t g_iEnginePWMPulsesTrigger[2];
+uint8_t g_bBEMFCrossingPointDetected[2]; // was the zero-crossing point already detected during this commutation step or not
 
 void PinToPP(GPIO_TypeDef *port, uint16_t pin)
 {
@@ -2433,7 +2438,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_V_MINUS_OFF; } else { M1_V_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 1;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2457,7 +2465,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_U_MINUS_OFF; } else { M1_U_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 2;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2479,7 +2490,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_W_MINUS_OFF; } else { M1_W_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 3;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2503,7 +2517,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_V_MINUS_OFF; } else { M1_V_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 4;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2525,7 +2542,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_U_MINUS_OFF; } else { M1_U_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 5;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2549,7 +2569,10 @@ void DoCommutationNextStep(uint8_t motorx)
 			{
 				if (motorx) { M2_W_MINUS_OFF; } else { M1_W_MINUS_OFF; }
 				g_iCurrentCycleNum[motorx] = 0;
+				g_iEnginePWMPulsesCount[motorx] = 0;
+				g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
 				g_iCurrentCommutationStep[motorx] = 0;
+				g_bBEMFCrossingPointDetected[motorx] = 0;
 				if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 				{
 					ADC_ChannelConfTypeDef sConfig = {0};
@@ -2567,6 +2590,7 @@ void DoCommutationNextStep(uint8_t motorx)
 			}
 			break;
 	}
+	
 	g_bNeedNewCommutation[motorx] = 0;
 }
 
@@ -2581,40 +2605,45 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 	// when powered voltage is too close to zero
 	if (powerVoltage <= bemfVoltage)
 		return;
-	if (bemfVoltage == 0)
+	if (bemfVoltage < powerVoltage / 4)
 		return;
 	if (powerVoltage <= 677)
 		return;
 
 	uint8_t motorx = hadc->Instance == MOTOR1_ADC_INSTANCE ? MOTOR1 : MOTOR2;
-
+	
 	// 0, 2, 4 - upward bemf
 	// 1, 3, 5 - downward bemf
 	if (g_iCurrentCommutationStep[motorx] == 0 || g_iCurrentCommutationStep[motorx] == 2 || g_iCurrentCommutationStep[motorx] == 4)
 	{
-		if (bemfVoltage > powerVoltage / 2)
+		if (bemfVoltage > 51 * powerVoltage / 100)
 		{
-			g_bNeedNewCommutation[MOTOR1] = 1;
-			DoCommutationNextStep(motorx);
+			g_bNeedNewCommutation[motorx] = 1;
+			g_bADCReliable[motorx] = 1;
+			g_bBEMFCrossingPointDetected[motorx] = 1;
+			g_iEnginePWMPulsesTrigger[motorx] = 2 * g_iEnginePWMPulsesCount[motorx];
 		}
 	}
 	else if (g_iCurrentCommutationStep[motorx] == 1 || g_iCurrentCommutationStep[motorx] == 3 || g_iCurrentCommutationStep[motorx] == 5)
 	{
-		if (bemfVoltage < powerVoltage / 2)
+		if (bemfVoltage < 49 * powerVoltage / 100)
 		{
-			g_bNeedNewCommutation[MOTOR1] = 1;
-			DoCommutationNextStep(motorx);
+			g_bNeedNewCommutation[motorx] = 1;
+			g_bADCReliable[motorx] = 1;
+			g_bBEMFCrossingPointDetected[motorx] = 1;
+			g_iEnginePWMPulsesTrigger[motorx] = 2 * g_iEnginePWMPulsesCount[motorx];
 		}
 	}
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Instance == MOTOR1_PWM_TIM_INSTANCE)
-	{
-		HAL_ADC_Start_IT(&MOTOR1_ADC);
-		return;
-	}
+	uint8_t motorx = htim->Instance == MOTOR1_PWM_TIM_INSTANCE ? MOTOR1 : MOTOR2;
+	g_iEnginePWMPulsesCount[motorx]++;
+	if (g_iEnginePWMPulsesCount[motorx] >= g_iEnginePWMPulsesTrigger[motorx])
+		DoCommutationNextStep(motorx);
+	else if (!g_bBEMFCrossingPointDetected[motorx])
+		HAL_ADC_Start_IT(htim->Instance == MOTOR1_PWM_TIM_INSTANCE ? &MOTOR1_ADC : &MOTOR2_ADC);
 }
 
 // GP timer callback
@@ -2653,11 +2682,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			
 			if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL) // transition to normal completed in this cycle
 			{
+				// these two lines turns on the ADC
 				//__HAL_TIM_SetCompare(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL, ADC_BEMF_DELAY_CYCLES_COUNT);
 				//HAL_TIM_OC_Start_IT(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL);
 			}
 		}
-		else if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
+		else if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL && !g_bADCReliable[motorx])
 		{
 			DoCommutationNextStep(motorx);
 		}
@@ -2681,6 +2711,11 @@ void StopMotorPWM(uint8_t motorx)
 	if (motorx) { M2_W_MINUS_OFF; } else { M1_W_MINUS_OFF; }
 	
 	g_iCurrentMode[motorx] = MOTOR_MODE_STOP;
+	g_fEngineState[motorx] = 0.0f;
+	g_bADCReliable[motorx] = 0;
+	g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
+	g_iEnginePWMPulsesCount[motorx] = 0;
+	g_bBEMFCrossingPointDetected[motorx] = 0;
 }
 
 void SetComplementaryPWMDeadTime(TIM_HandleTypeDef *htim, uint8_t deadtime)
@@ -2731,21 +2766,82 @@ void StartMotorSpin(uint8_t motorx)
 	HAL_TIM_Base_Start_IT(&htim);
 	
 	g_iCurrentMode[motorx] = MOTOR_MODE_START;
+	g_fEngineState[motorx] = 0.0f;
+	g_bADCReliable[motorx] = 0;
+	g_iEnginePWMPulsesTrigger[motorx] = 0xFFFFFFFF;
+	g_iEnginePWMPulsesCount[motorx] = 0;
+	g_bBEMFCrossingPointDetected[motorx] = 0;
+}
+
+void SetMotorCurrent(uint8_t motorx, uint8_t baccelerating)
+{
+	TIM_HandleTypeDef htim;
+	if (motorx == MOTOR1)
+	{
+		htim = MOTOR1_PWM_TIM;
+	}
+	else if (motorx == MOTOR2)
+	{
+		htim = MOTOR2_PWM_TIM;
+	}
+	else
+	{
+		return;
+	}
+	
+	uint32_t pulse = PWM_START_PULSE;
+	if (baccelerating)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 2.20f * (g_fEngineState[motorx] / 100.0f)));
+	else if (g_fEngineState[motorx] > 96.0f)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 1.95f * (g_fEngineState[motorx] / 100.0f)));
+	else if (g_fEngineState[motorx] > 92.0f)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 1.70f * (g_fEngineState[motorx] / 100.0f)));
+	else if (g_fEngineState[motorx] > 86.0f)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 1.40f * (g_fEngineState[motorx] / 100.0f)));
+	else if (g_fEngineState[motorx] > 65.0f)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 1.20f * (g_fEngineState[motorx] / 100.0f)));
+	else if (g_fEngineState[motorx] > 55.0f)
+		pulse = (uint32_t)(PWM_START_PULSE * (1.0f + 1.15f * (g_fEngineState[motorx] / 100.0f)));
+	
+	__HAL_TIM_SET_COMPARE(&htim, motorx ? M2_U_CH : M1_U_CH, pulse);
+	__HAL_TIM_SET_COMPARE(&htim, motorx ? M2_V_CH : M1_V_CH, pulse);
+	__HAL_TIM_SET_COMPARE(&htim, motorx ? M2_W_CH : M1_W_CH, pulse);
 }
 
 void ProcessMotor(uint8_t motorx)
 {
-		if (g_fEngineCommand[motorx] > 20.0f)
+		if (g_fEngineCommand[motorx] > 15.0f)
 		{
 			if (g_iCurrentMode[motorx] == MOTOR_MODE_STOP)
+			{
 				StartMotorSpin(motorx);
+			}
 			else if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
-				g_iTotalCycleCount[motorx] = (int)(0.01f * (100.0f - g_fEngineCommand[motorx]) * (PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT - ENGINE_MAX_CYCLE_COUNT) + ENGINE_MAX_CYCLE_COUNT);
+			{
+				if (g_fEngineCommand[motorx] >= g_fEngineState[motorx] - 0.1f && g_fEngineCommand[motorx] <= g_fEngineState[motorx] + 0.1f)
+				{
+					SetMotorCurrent(motorx, 0);
+					g_fEngineState[motorx] = g_fEngineCommand[motorx];
+				}
+				g_iTotalCycleCount[motorx] = (int)(0.01f * (100.0f - g_fEngineState[motorx]) * (PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT - ENGINE_MAX_CYCLE_COUNT) + ENGINE_MAX_CYCLE_COUNT);
+				if (g_fEngineState[motorx] <= g_fEngineCommand[motorx] - 0.05f)
+				{
+					SetMotorCurrent(motorx, 1);
+					g_fEngineState[motorx] += 0.00014f;
+				}
+				else if (g_fEngineState[motorx] >= g_fEngineCommand[motorx] + 0.05f)
+				{
+					SetMotorCurrent(motorx, 0);
+					g_fEngineState[motorx] -= 0.00014f;
+				}
+			}
 		}
-		else if (g_fEngineCommand[motorx] < 15.0f)
+		else if (g_fEngineCommand[motorx] < 10.0f)
 		{
 			if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
+			{
 				StopMotorPWM(motorx);
+			}
 		}
 }
 
@@ -2793,7 +2889,7 @@ void RespondToRequest()
 	
 	UpdateTemperatures(temperatureSensors, TEMPERATURE_SENSORS_COUNT);
 	
-	sprintf((char*)g_txdata, "START %f %f %f %f %f %f %f %f %d END", g_fValveCommand[0], g_fValveCommand[1], g_fEngineCommand[0], g_fEngineCommand[1], temperatureSensors[0].temperature, temperatureSensors[1].temperature, temperatureSensors[2].temperature, temperatureSensors[3].temperature, g_bRelayCommand);
+	sprintf((char*)g_txdata, "START %f %f %f %f %f %f %f %f %d END", g_fValveCommand[0], g_fValveCommand[1], g_fEngineState[0], g_fEngineState[1], temperatureSensors[0].temperature, temperatureSensors[1].temperature, temperatureSensors[2].temperature, temperatureSensors[3].temperature, g_bRelayCommand);
 	
 	HAL_UART_Transmit_IT(&SEND_RESPONSE_UART, g_txdata, strlen((char*)g_txdata));
 }
@@ -2867,10 +2963,11 @@ int main(void)
 
 
 	HAL_Delay(3000);
-	LudwigVanBeethoven(MOTOR1);
+	//LudwigVanBeethoven(MOTOR1);
 	HAL_Delay(3000);
-	LudwigVanBeethoven(MOTOR2);
-	
+	//LudwigVanBeethoven(MOTOR2);
+	g_fEngineCommand[MOTOR1] = 100.0f;
+	g_fEngineCommand[MOTOR2] = 100.0f;
   while (1)
   {
 		if (g_bReadyToParse)
@@ -2917,7 +3014,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 160;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -2961,7 +3058,7 @@ static void MX_ADC1_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
@@ -3022,7 +3119,7 @@ static void MX_ADC2_Init(void)
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc2.Instance = ADC2;
-  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc2.Init.Resolution = ADC_RESOLUTION_12B;
   hadc2.Init.ScanConvMode = ENABLE;
   hadc2.Init.ContinuousConvMode = DISABLE;
@@ -3141,7 +3238,7 @@ static void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime = 94;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
   if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
   {
@@ -3174,7 +3271,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 83;
+  htim2.Init.Prescaler = 79;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 20000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -3237,9 +3334,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 83;
+  htim4.Init.Prescaler = 39;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 25;
+  htim4.Init.Period = 18;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -3282,9 +3379,9 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 83;
+  htim5.Init.Prescaler = 39;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 25;
+  htim5.Init.Period = 18;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -3326,7 +3423,7 @@ static void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 83;
+  htim6.Init.Prescaler = 39;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim6.Init.Period = 100;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -3425,7 +3522,7 @@ static void MX_TIM8_Init(void)
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime = 0;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_LOW;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
   if (HAL_TIMEx_ConfigBreakDeadTime(&htim8, &sBreakDeadTimeConfig) != HAL_OK)
   {
