@@ -2611,6 +2611,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 		return;
 
 	uint8_t motorx = hadc->Instance == MOTOR1_ADC_INSTANCE ? MOTOR1 : MOTOR2;
+	g_bADCReliable[motorx] = 1;
 	
 	// 0, 2, 4 - upward bemf
 	// 1, 3, 5 - downward bemf
@@ -2619,7 +2620,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 		if (bemfVoltage > 51 * powerVoltage / 100)
 		{
 			g_bNeedNewCommutation[motorx] = 1;
-			g_bADCReliable[motorx] = 1;
 			g_bBEMFCrossingPointDetected[motorx] = 1;
 			g_iEnginePWMPulsesTrigger[motorx] = 2 * g_iEnginePWMPulsesCount[motorx];
 		}
@@ -2629,7 +2629,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 		if (bemfVoltage < 49 * powerVoltage / 100)
 		{
 			g_bNeedNewCommutation[motorx] = 1;
-			g_bADCReliable[motorx] = 1;
 			g_bBEMFCrossingPointDetected[motorx] = 1;
 			g_iEnginePWMPulsesTrigger[motorx] = 2 * g_iEnginePWMPulsesCount[motorx];
 		}
@@ -2683,8 +2682,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL) // transition to normal completed in this cycle
 			{
 				// these two lines turns on the ADC
-				//__HAL_TIM_SetCompare(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL, ADC_BEMF_DELAY_CYCLES_COUNT);
-				//HAL_TIM_OC_Start_IT(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL);
+				__HAL_TIM_SetCompare(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL, ADC_BEMF_DELAY_CYCLES_COUNT);
+				HAL_TIM_OC_Start_IT(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL);
 			}
 		}
 		else if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL && !g_bADCReliable[motorx])
