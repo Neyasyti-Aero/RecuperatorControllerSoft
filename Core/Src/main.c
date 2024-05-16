@@ -13,8 +13,8 @@ uint8_t TEMPERATURE_SENSORS_ID[TEMPERATURE_SENSORS_COUNT][8] = {
 {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 };
 
-#define RECIEVE_COMMAND_UART huart3
-#define SEND_RESPONSE_UART huart3
+#define RECIEVE_COMMAND_UART huart1
+#define SEND_RESPONSE_UART huart1
 
 // Servo Defines
 #define SERVO1_MIN_VALUE 1000
@@ -51,7 +51,7 @@ DS18B20 temperatureSensors[TEMPERATURE_SENSORS_COUNT];
 
 uint8_t g_rxdata[256];
 uint8_t g_rxbyte[1];
-uint8_t g_iRxBufferPos;
+uint16_t g_iRxBufferPos;
 uint8_t g_txdata[256];
 uint8_t g_bReadyToParse;
 uint8_t g_bNeedToRespond;
@@ -281,7 +281,7 @@ void LudwigVanBeethoven(uint8_t motorx)
 	HAL_Delay(250);
 	if (motorx) { M2_U_PLUS_OFF; } else { M1_U_PLUS_OFF; }
 	HAL_Delay(1);
-	
+
 	__HAL_TIM_SetCounter(&htim, 0);
 	__HAL_TIM_SET_COMPARE(&htim, motorx ? M2_U_CH : M1_U_CH, 100);
 	(motorx ? MOTOR2_PWM_TIM_INSTANCE : MOTOR1_PWM_TIM_INSTANCE)->PSC = 2;
@@ -2792,6 +2792,18 @@ void ProcessMotor(uint8_t motorx)
 	}
 }
 
+void MAX485Recieve()
+{
+	HAL_GPIO_WritePin(RE_GPIO_Port, RE_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DE_GPIO_Port, DE_Pin, GPIO_PIN_RESET);
+}
+
+void MAX485Transmit()
+{
+	HAL_GPIO_WritePin(RE_GPIO_Port, RE_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(DE_GPIO_Port, DE_Pin, GPIO_PIN_SET);
+}
+
 void ParseRxValues()
 {
 	g_iRxBufferPos = 255;
@@ -2808,6 +2820,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (g_iRxBufferPos == 255)
 	{
+		MAX485Recieve();
 		HAL_UART_Receive_IT(&RECIEVE_COMMAND_UART, g_rxbyte, sizeof(g_rxbyte));
 		return;
 	}
@@ -2827,7 +2840,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if (g_rxbyte[0] == 'C')
 		g_bNeedToRespond = 1;
 
+	MAX485Recieve();
 	HAL_UART_Receive_IT(&RECIEVE_COMMAND_UART, g_rxbyte, sizeof(g_rxbyte));
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	MAX485Recieve();
 }
 
 void RespondToRequest()
@@ -2838,6 +2857,7 @@ void RespondToRequest()
 
 	sprintf((char*)g_txdata, "START %f %f %f %f %f %f %f %f %d END", g_fValveCommand[0], g_fValveCommand[1], g_fEngineState[0], g_fEngineState[1], temperatureSensors[0].temperature, temperatureSensors[1].temperature, temperatureSensors[2].temperature, temperatureSensors[3].temperature, g_bRelayCommand);
 
+	MAX485Transmit();
 	HAL_UART_Transmit_IT(&SEND_RESPONSE_UART, g_txdata, strlen((char*)g_txdata));
 }
 
@@ -2871,6 +2891,7 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&SERVO_SPEED_TIM);
 
 	// Start recieving commands
+	MAX485Recieve();
 	HAL_UART_Receive_IT(&RECIEVE_COMMAND_UART, g_rxbyte, sizeof(g_rxbyte));
 
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET); // led D3
