@@ -101,7 +101,7 @@ static void MX_TIM6_Init(void);
 #define PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT 350
 #define PWM_START_DEADTIME 0.00f // 0 ... 1, commutation-related
 #define PWM_START_COMPLEMENTARY_DEADTIME 50 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
-#define ENGINE_MAX_CYCLE_COUNT 76
+#define ENGINE_MAX_CYCLE_COUNT 70
 
 // Motor 1 commutation defines
 
@@ -2630,8 +2630,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL) // transition to normal completed in this cycle
 			{
 				// these two lines turns on the ADC
-				__HAL_TIM_SetCompare(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL, ADC_BEMF_DELAY_CYCLES_COUNT);
-				HAL_TIM_OC_Start_IT(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL);
+				//__HAL_TIM_SetCompare(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL, ADC_BEMF_DELAY_CYCLES_COUNT);
+				//HAL_TIM_OC_Start_IT(motorx ? &MOTOR2_PWM_TIM : &MOTOR1_PWM_TIM, motorx ? MOTOR2_ADC_DELAY_CHANNEL : MOTOR1_ADC_DELAY_CHANNEL);
 			}
 		}
 		else if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL && !g_bADCReliable[motorx])
@@ -3314,7 +3314,7 @@ static void MX_TIM8_Init(void)
 static void MX_USART1_UART_Init(void)
 {
 	huart1.Instance = USART1;
-	huart1.Init.BaudRate = 115200;
+	huart1.Init.BaudRate = 19200;
 	huart1.Init.WordLength = UART_WORDLENGTH_8B;
 	huart1.Init.StopBits = UART_STOPBITS_1;
 	huart1.Init.Parity = UART_PARITY_NONE;
