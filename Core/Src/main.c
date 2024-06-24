@@ -99,8 +99,8 @@ static void MX_TIM6_Init(void);
 #define PWM_START_PULSE 200 // 1 microsecond = pulse 120, 900 <=> 8000 mA
 #define PWM_START_CYCLE_COUNT 700 // 1 cycle = 0.000025 second, 40 kHz, commutation-related
 #define PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT 350
-#define PWM_START_DEADTIME 0.00f // 0 ... 1, commutation-related
-#define PWM_START_COMPLEMENTARY_DEADTIME 50 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
+#define PWM_START_DEADTIME 0.02f // 0 ... 1, commutation-related
+#define PWM_START_COMPLEMENTARY_DEADTIME 90 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
 #define ENGINE_MAX_CYCLE_COUNT 70
 
 // Motor 1 commutation defines
@@ -2808,10 +2808,58 @@ void ParseRxValues()
 {
 	g_iRxBufferPos = 255;
 
-	g_rxdata[127] = 0;
-
+	// validation
+	uint8_t spaceCount = 0;
+	uint8_t dotCount = 0;
+	uint8_t valid = 1;
+	
+	for (uint8_t i = 0; i < strlen((char*)g_rxdata); i++)
+	{
+		if (g_rxdata[i] == 0x20)
+		{
+			spaceCount++;
+			continue;
+		}
+		
+		if (g_rxdata[i] == 0x2E)
+		{
+			dotCount++;
+			continue;
+		}
+		
+		if (g_rxdata[i] > 0x54 || g_rxdata[i] < 0x30 || (g_rxdata[i] > 0x39 && g_rxdata[i] < 0x44 && g_rxdata[i] != 0x41) || (g_rxdata[i] > 0x45 && g_rxdata[i] < 0x52 && g_rxdata[i] != 0x4E))
+		{
+			valid = 0;
+			break;
+		}
+		
+		if (g_rxdata[i] == 0x2D && i > 0)
+		{
+			if (g_rxdata[i - 1] != 0x20)
+			{
+				valid = 0;
+				break;
+			}
+		}
+	}
+	
+	if (valid == 1 && (strstr((char*)g_rxdata, "START ") == NULL || strstr((char*)g_rxdata, " END") == NULL || spaceCount != 6 || dotCount != 4))
+	{
+		valid = 0;
+	}
+	
+	if (valid == 0)
+	{
+		memset(g_rxdata, (uint8_t)0x00, sizeof(g_rxdata));
+		g_iRxBufferPos = 0;
+		g_bReadyToParse = 0;
+		return;
+	}
+	
 	sscanf((char*)g_rxdata, "START %f %f %f %f %i END", &g_fValveCommand[0], &g_fValveCommand[1], &g_fEngineCommand[0], &g_fEngineCommand[1], &g_bRelayCommand);
-
+	
+	memset(g_rxdata, (uint8_t)0x00, sizeof(g_rxdata));
+	
 	g_iRxBufferPos = 0;
 	g_bReadyToParse = 0;
 }
@@ -3314,7 +3362,7 @@ static void MX_TIM8_Init(void)
 static void MX_USART1_UART_Init(void)
 {
 	huart1.Instance = USART1;
-	huart1.Init.BaudRate = 19200;
+	huart1.Init.BaudRate = 9600;
 	huart1.Init.WordLength = UART_WORDLENGTH_8B;
 	huart1.Init.StopBits = UART_STOPBITS_1;
 	huart1.Init.Parity = UART_PARITY_NONE;
