@@ -99,26 +99,26 @@ static void MX_TIM6_Init(void);
 #define PWM_START_PULSE 200 // 1 microsecond = pulse 120, 900 <=> 8000 mA
 #define PWM_START_CYCLE_COUNT 700 // 1 cycle = 0.000025 second, 40 kHz, commutation-related
 #define PWM_START_TO_NORMAL_TRANSITION_CYCLE_COUNT 350
-#define PWM_START_DEADTIME 0.02f // 0 ... 1, commutation-related
-#define PWM_START_COMPLEMENTARY_DEADTIME 90 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
-#define ENGINE_MAX_CYCLE_COUNT 70
+#define PWM_START_DEADTIME 0.00f // 0 ... 1, commutation-related
+#define PWM_START_COMPLEMENTARY_DEADTIME 50 // pwm-related, https://hasanyavuz.ozderya.net/?p=437
+#define ENGINE_MAX_CYCLE_COUNT 76
 
 // Motor 1 commutation defines
 
 #define M1_U_CH TIM_CHANNEL_3
 #define M1_U_H &MOTOR1_PWM_TIM, M1_U_CH
-#define M1_U_PLUS_ON PinToAF(M1_U_L, &MOTOR1_PWM_TIM); PinToAF(M1_U_H_GPIO_Port, M1_U_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_U_H); HAL_TIM_PWM_Start(M1_U_H)
-#define M1_U_PLUS_OFF HAL_TIM_PWM_Stop(M1_U_H); HAL_TIMEx_PWMN_Stop(M1_U_H); PinToPP(M1_U_L); PinToPP(M1_U_H_GPIO_Port, M1_U_H_Pin); HAL_GPIO_WritePin(M1_U_H_GPIO_Port, M1_U_H_Pin, GPIO_PIN_RESET)
+#define M1_U_PLUS_ON PinToAF(M1_U_L, &MOTOR1_PWM_TIM); PinToAF(M1_U_H_GPIO_Port, M1_U_H_Pin, &MOTOR1_PWM_TIM); HAL_TIM_PWM_Start(M1_U_H); HAL_TIMEx_PWMN_Start(M1_U_H)
+#define M1_U_PLUS_OFF HAL_TIMEx_PWMN_Stop(M1_U_H); PinToPP(M1_U_L); HAL_TIM_PWM_Stop(M1_U_H); PinToPP(M1_U_H_GPIO_Port, M1_U_H_Pin); HAL_GPIO_WritePin(M1_U_H_GPIO_Port, M1_U_H_Pin, GPIO_PIN_RESET)
 
 #define M1_V_CH TIM_CHANNEL_2
 #define M1_V_H &MOTOR1_PWM_TIM, M1_V_CH
-#define M1_V_PLUS_ON PinToAF(M1_V_L, &MOTOR1_PWM_TIM); PinToAF(M1_V_H_GPIO_Port, M1_V_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_V_H); HAL_TIM_PWM_Start(M1_V_H)
-#define M1_V_PLUS_OFF HAL_TIM_PWM_Stop(M1_V_H); HAL_TIMEx_PWMN_Stop(M1_V_H); PinToPP(M1_V_L); PinToPP(M1_V_H_GPIO_Port, M1_V_H_Pin); HAL_GPIO_WritePin(M1_V_H_GPIO_Port, M1_V_H_Pin, GPIO_PIN_RESET)
+#define M1_V_PLUS_ON PinToAF(M1_V_L, &MOTOR1_PWM_TIM); PinToAF(M1_V_H_GPIO_Port, M1_V_H_Pin, &MOTOR1_PWM_TIM); HAL_TIM_PWM_Start(M1_V_H); HAL_TIMEx_PWMN_Start(M1_V_H);
+#define M1_V_PLUS_OFF HAL_TIMEx_PWMN_Stop(M1_V_H); PinToPP(M1_V_L); HAL_TIM_PWM_Stop(M1_V_H); PinToPP(M1_V_H_GPIO_Port, M1_V_H_Pin); HAL_GPIO_WritePin(M1_V_H_GPIO_Port, M1_V_H_Pin, GPIO_PIN_RESET)
 
 #define M1_W_CH TIM_CHANNEL_1
 #define M1_W_H &MOTOR1_PWM_TIM, M1_W_CH
-#define M1_W_PLUS_ON PinToAF(M1_W_L, &MOTOR1_PWM_TIM); PinToAF(M1_W_H_GPIO_Port, M1_W_H_Pin, &MOTOR1_PWM_TIM); HAL_TIMEx_PWMN_Start(M1_W_H); HAL_TIM_PWM_Start(M1_W_H)
-#define M1_W_PLUS_OFF HAL_TIM_PWM_Stop(M1_W_H); HAL_TIMEx_PWMN_Stop(M1_W_H); PinToPP(M1_W_L); PinToPP(M1_W_H_GPIO_Port, M1_W_H_Pin); HAL_GPIO_WritePin(M1_W_H_GPIO_Port, M1_W_H_Pin, GPIO_PIN_RESET)
+#define M1_W_PLUS_ON PinToAF(M1_W_L, &MOTOR1_PWM_TIM); PinToAF(M1_W_H_GPIO_Port, M1_W_H_Pin, &MOTOR1_PWM_TIM); HAL_TIM_PWM_Start(M1_W_H); HAL_TIMEx_PWMN_Start(M1_W_H); 
+#define M1_W_PLUS_OFF HAL_TIMEx_PWMN_Stop(M1_W_H); PinToPP(M1_W_L); HAL_TIM_PWM_Stop(M1_W_H); PinToPP(M1_W_H_GPIO_Port, M1_W_H_Pin); HAL_GPIO_WritePin(M1_W_H_GPIO_Port, M1_W_H_Pin, GPIO_PIN_RESET)
 
 #define M1_U_L M1_U_L_GPIO_Port, M1_U_L_Pin
 #define M1_U_MINUS_ON HAL_GPIO_WritePin(M1_U_L, GPIO_PIN_SET)
@@ -136,18 +136,18 @@ static void MX_TIM6_Init(void);
 
 #define M2_U_CH TIM_CHANNEL_3
 #define M2_U_H &MOTOR2_PWM_TIM, M2_U_CH
-#define M2_U_PLUS_ON PinToAF(M2_U_L, &MOTOR2_PWM_TIM); PinToAF(M2_U_H_GPIO_Port, M2_U_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_U_H); HAL_TIM_PWM_Start(M2_U_H)
-#define M2_U_PLUS_OFF HAL_TIM_PWM_Stop(M2_U_H); HAL_TIMEx_PWMN_Stop(M2_U_H); PinToPP(M2_U_L); PinToPP(M2_U_H_GPIO_Port, M2_U_H_Pin); HAL_GPIO_WritePin(M2_U_H_GPIO_Port, M2_U_H_Pin, GPIO_PIN_RESET)
+#define M2_U_PLUS_ON PinToAF(M2_U_L, &MOTOR2_PWM_TIM); PinToAF(M2_U_H_GPIO_Port, M2_U_H_Pin, &MOTOR2_PWM_TIM); HAL_TIM_PWM_Start(M2_U_H); HAL_TIMEx_PWMN_Start(M2_U_H)
+#define M2_U_PLUS_OFF HAL_TIMEx_PWMN_Stop(M2_U_H); PinToPP(M2_U_L); HAL_TIM_PWM_Stop(M2_U_H); PinToPP(M2_U_H_GPIO_Port, M2_U_H_Pin); HAL_GPIO_WritePin(M2_U_H_GPIO_Port, M2_U_H_Pin, GPIO_PIN_RESET)
 
 #define M2_V_CH TIM_CHANNEL_2
 #define M2_V_H &MOTOR2_PWM_TIM, M2_V_CH
-#define M2_V_PLUS_ON PinToAF(M2_V_L, &MOTOR2_PWM_TIM); PinToAF(M2_V_H_GPIO_Port, M2_V_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_V_H); HAL_TIM_PWM_Start(M2_V_H)
-#define M2_V_PLUS_OFF HAL_TIM_PWM_Stop(M2_V_H); HAL_TIMEx_PWMN_Stop(M2_V_H); PinToPP(M2_V_L); PinToPP(M2_V_H_GPIO_Port, M2_V_H_Pin); HAL_GPIO_WritePin(M2_V_H_GPIO_Port, M2_V_H_Pin, GPIO_PIN_RESET)
+#define M2_V_PLUS_ON PinToAF(M2_V_L, &MOTOR2_PWM_TIM); PinToAF(M2_V_H_GPIO_Port, M2_V_H_Pin, &MOTOR2_PWM_TIM); HAL_TIM_PWM_Start(M2_V_H); HAL_TIMEx_PWMN_Start(M2_V_H);
+#define M2_V_PLUS_OFF HAL_TIMEx_PWMN_Stop(M2_V_H); PinToPP(M2_V_L); HAL_TIM_PWM_Stop(M2_V_H); PinToPP(M2_V_H_GPIO_Port, M2_V_H_Pin); HAL_GPIO_WritePin(M2_V_H_GPIO_Port, M2_V_H_Pin, GPIO_PIN_RESET)
 
 #define M2_W_CH TIM_CHANNEL_1
 #define M2_W_H &MOTOR2_PWM_TIM, M2_W_CH
-#define M2_W_PLUS_ON PinToAF(M2_W_L, &MOTOR2_PWM_TIM); PinToAF(M2_W_H_GPIO_Port, M2_W_H_Pin, &MOTOR2_PWM_TIM); HAL_TIMEx_PWMN_Start(M2_W_H); HAL_TIM_PWM_Start(M2_W_H)
-#define M2_W_PLUS_OFF HAL_TIM_PWM_Stop(M2_W_H); HAL_TIMEx_PWMN_Stop(M2_W_H); PinToPP(M2_W_L); PinToPP(M2_W_H_GPIO_Port, M2_W_H_Pin); HAL_GPIO_WritePin(M2_W_H_GPIO_Port, M2_W_H_Pin, GPIO_PIN_RESET)
+#define M2_W_PLUS_ON PinToAF(M2_W_L, &MOTOR2_PWM_TIM); PinToAF(M2_W_H_GPIO_Port, M2_W_H_Pin, &MOTOR2_PWM_TIM); HAL_TIM_PWM_Start(M2_W_H); HAL_TIMEx_PWMN_Start(M2_W_H)
+#define M2_W_PLUS_OFF HAL_TIMEx_PWMN_Stop(M2_W_H); PinToPP(M2_W_L); HAL_TIM_PWM_Stop(M2_W_H); PinToPP(M2_W_H_GPIO_Port, M2_W_H_Pin); HAL_GPIO_WritePin(M2_W_H_GPIO_Port, M2_W_H_Pin, GPIO_PIN_RESET)
 
 #define M2_U_L M2_U_L_GPIO_Port, M2_U_L_Pin
 #define M2_U_MINUS_ON HAL_GPIO_WritePin(M2_U_L, GPIO_PIN_SET)
@@ -208,7 +208,7 @@ void PinToPP(GPIO_TypeDef *port, uint16_t pin)
 
 	GPIO_InitStruct.Pin = pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	HAL_GPIO_Init(port, &GPIO_InitStruct);
 }
@@ -221,7 +221,7 @@ void PinToAF(GPIO_TypeDef *port, uint16_t pin, TIM_HandleTypeDef *htim)
 
 	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
 	GPIO_InitStruct.Pin = pin;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	if (htim->Instance == MOTOR1_PWM_TIM_INSTANCE)
 		GPIO_InitStruct.Alternate = MOTOR1_PWM_TIM_AF;
@@ -3423,28 +3423,28 @@ static void MX_GPIO_Init(void)
 
 	GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_6;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = GPIO_PIN_13;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_7;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = LED_2_Pin|LED_3_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = RELAY_Pin|RE_Pin|DE_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }

@@ -363,7 +363,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
     /**TIM8 GPIO Configuration
-    PA5     ------> TIM8_CH1N
+    PA7     ------> TIM8_CH1N
     PB14     ------> TIM8_CH2N
     PB15     ------> TIM8_CH3N
     PC6     ------> TIM8_CH1

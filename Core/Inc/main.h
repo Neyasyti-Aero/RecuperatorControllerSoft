@@ -71,7 +71,7 @@ void Error_Handler(void);
 #define P3_SERVO_1_GPIO_Port GPIOA
 #define P4_SERVO_2_Pin GPIO_PIN_2
 #define P4_SERVO_2_GPIO_Port GPIOA
-#define M2_W_L_Pin GPIO_PIN_5
+#define M2_W_L_Pin GPIO_PIN_7
 #define M2_W_L_GPIO_Port GPIOA
 #define M2_V_BEMF_Pin GPIO_PIN_4
 #define M2_V_BEMF_GPIO_Port GPIOC
