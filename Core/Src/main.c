@@ -673,7 +673,7 @@ void ProcessMotor(uint8_t motorx)
 	}
 	else if (g_fEngineCommand[motorx] < 10.0f)
 	{
-		if (g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
+		if (g_iCurrentMode[motorx] == MOTOR_MODE_START || g_iCurrentMode[motorx] == MOTOR_MODE_NORMAL)
 		{
 			StopMotorPWM(motorx);
 		}
